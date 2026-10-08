@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>SanyaCoins Clicker</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background: #1c1c1e; color: #ffffff;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      height: 100vh; margin: 0;
+    }
+    h1 { margin: 0 0 16px; }
+    .score { font-size: 32px; font-weight: bold; color: #ffd700; margin-bottom: 24px; }
+    button {
+      background: #007aff; color: white; border: none;
+      padding: 20px 40px; font-size: 20px; border-radius: 12px;
+      cursor: pointer; touch-action: manipulation;
+    }
+    button:active { background: #005dbb; }
+    .leaderboard { margin-top: 32px; text-align: left; width: 100%; max-width: 300px; }
+    .leaderboard h3 { margin: 0 0 8px; }
+    .player { display: flex; justify-content: space-between; margin-bottom: 6px; color: #ccc; }
+  </style>
+</head>
+<body>
+  <h1>SanyaCoins</h1>
+  <div class="score"><span id="score">0</span> кликов</div>
+  <button id="clickBtn">🖱️ КЛИКАТЬ</button>
+
+  <div class="leaderboard">
+    <h3>🏆 Топ-10</h3>
+    <div id="topList"></div>
+  </div>
+
+  <script>
+    const tg = window.Telegram.WebApp;
+    tg.ready();
+
+    let score = 0;
+    const scoreEl = document.getElementById('score');
+    const btn = document.getElementById('clickBtn');
+    const topList = document.getElementById('topList');
+
+    btn.addEventListener('click', () => {
+      score++;
+      scoreEl.textContent = score;
+    });
+
+    // Отправляем результат при закрытии окна
+    tg.onClose(() => {
+      sendScore(score);
+    });
+
+    function sendScore(s) {
+      fetch('/api/click', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          user_id: tg.initDataUnsafe?.user?.id || 0,
+          username: tg.initDataUnsafe?.user?.username || 'anon',
+          score: s
+        })
+      })
+      .catch(err => console.error('Ошибка отправки:', err));
+    }
+
+    async function loadLeaderboard() {
+      try {
+        const res = await fetch('/api/top');
+        const data = await res.json();
+        topList.innerHTML = data.map((p, i) => `
+          <div class="player">
+            <span>${i + 1}. ${p.username || 'ID ' + p.user_id}</span>
+            <span>${p.score}</span>
+          </div>
+        `).join('');
+      } catch (e) {
+        console.error('Ошибка топа:', e);
+      }
+    }
+
+    loadLeaderboard();
+  </script>
+</body>
+</html>
